@@ -37,3 +37,9 @@ mkdirSync('out', { recursive: true });
 writeFileSync('out/data.json', JSON.stringify(data));
 writeFileSync('out/alexia.ics', cal);
 console.log('OK, tests passés');
+// Télétravail coché : dans le calendrier, même un jour absent des données, et à la place du repos
+const withTT = { ...data, tt: { '2026-10-29': 'tt', '2026-10-28': 'tt' } };
+const calTT = ics(withTT);
+assert.equal((calTT.match(/Télétravail/g) || []).length, 2);
+assert.doesNotMatch(calTT, /UID:2026-10-29-off@alexia\r\nDTSTAMP:[^\r]+\r\nDTSTART;VALUE=DATE:20261029\r\nDTEND;VALUE=DATE:20261030\r\nSUMMARY:🌿/);
+console.log('OK, télétravail');

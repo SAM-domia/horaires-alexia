@@ -4,6 +4,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 
 const BASE = 'https://app.cineplanner.fr';
 const WHO = /FOUTEAU/i;
+const TT_URL = 'https://horaires-alexia.sam-domia.workers.dev';
 const paris = iso => new Date(iso).toLocaleString('sv-SE', { timeZone: 'Europe/Paris' }); // "AAAA-MM-JJ HH:MM:SS", même si l'API passe en UTC
 
 export function build(shifts, absences, today, prev) {
@@ -49,11 +50,13 @@ export function ics(data) {
   const stamp = `DTSTAMP:${z(data.checkedAt.slice(0, 19))}Z`;
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Alexia//Horaires//FR', 'X-WR-CALNAME:Horaires Alexia 💛', 'X-WR-TIMEZONE:Europe/Paris',
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H', ...TZ];
-  for (const [d, v] of Object.entries(data.days)) {
+  for (const d of [...new Set([...Object.keys(data.days), ...Object.keys(data.tt || {})])].sort()) {
+    const v = data.days[d] || {};
     for (const [a, b] of v.s || []) {
       const end = b < a ? addDays(d, 1) : d; // service qui finit après minuit
       lines.push('BEGIN:VEVENT', `UID:${d}-${z(a)}@alexia`, stamp, `DTSTART;TZID=Europe/Paris:${z(d)}T${z(a)}00`, `DTEND;TZID=Europe/Paris:${z(end)}T${z(b)}00`, `SUMMARY:🎬 Cinéma ${a}–${b}`, 'END:VEVENT');
     }
+    if (data.tt?.[d] && !v.s) { lines.push('BEGIN:VEVENT', `UID:${d}-off@alexia`, stamp, `DTSTART;VALUE=DATE:${z(d)}`, `DTEND;VALUE=DATE:${z(addDays(d, 1))}`, 'SUMMARY:🏠 Télétravail', 'END:VEVENT'); continue; }
     if (v.off && !v.s) lines.push('BEGIN:VEVENT', `UID:${d}-off@alexia`, stamp, `DTSTART;VALUE=DATE:${z(d)}`, `DTEND;VALUE=DATE:${z(addDays(d, 1))}`, `SUMMARY:🌿 ${txt(v.off)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
   }
   lines.push('END:VCALENDAR');
@@ -97,6 +100,9 @@ async function main() {
   const n = future(data, today), before = future(prev, today);
   if (!n) throw new Error('Aucun service à venir pour Alexia : on ne touche à rien');
   if (before >= 10 && before >= 5 * n) throw new Error(`Services à venir passés de ${before} à ${n} : suspect, on ne touche à rien`);
+  // Télétravail coché par Alexia (mini-service worker/) : recopié pour le widget et le calendrier.
+  const t = GIST_ID && await fetch(`${TT_URL}/?code=${GIST_ID}`, { signal: AbortSignal.timeout(15000) }).then(r => r.ok ? r.json() : null).catch(() => null);
+  data.tt = t?.days || prev?.tt || {};
   const files = { 'data.json': JSON.stringify(data), 'alexia.ics': ics(data) };
   if (GIST_ID) {
     const r = await gh('PATCH', JSON.stringify({ files: Object.fromEntries(Object.entries(files).map(([k, content]) => [k, { content }])) }));

@@ -150,6 +150,30 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
 .nav{gap:8px}
 .nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #bLove:active{transform:scale(1.25);transition:transform .8s linear}
+/* Télétravail : indigo iOS, jamais confondu avec le repos */
+:root{--indigo:#5856D6;--indigo-text:#4B49C9}
+@media (prefers-color-scheme:dark){:root{--indigo:#5E5CE6;--indigo-text:#A5A4FF}}
+.dot.tt,.dot.tt.sel{background:var(--indigo);color:#fff}
+.legend b.v{background:var(--indigo)}
+.row.tt .bar{background:var(--indigo)}
+.row.tt{background:color-mix(in srgb,var(--indigo) 12%,var(--card))}
+.row.rest,.row.tt{cursor:pointer}
+.hero .big.ttc{color:var(--indigo-text)}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;z-index:10;opacity:0;transition:opacity .25s var(--ease)}
+.sheetbg.on{opacity:1}
+.sheetbg[hidden]{display:none}
+.sheet{width:100%;max-width:480px;background:var(--card);color:var(--label);border-radius:28px 28px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .45s var(--spring)}
+.sheetbg.on .sheet{transform:none}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--label3);margin:0 auto 16px}
+.shT{font-size:20px;line-height:25px;font-weight:600}
+.shT::first-letter{text-transform:uppercase}
+.shS{font-size:15px;color:var(--label2);margin:2px 0 16px}
+.seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;appearance:none;border:0;background:transparent;color:var(--label);font:600 16px var(--font);height:44px;border-radius:10px;transition:background-color .25s var(--ease),color .25s}
+.seg button[aria-checked="true"][data-v="0"]{background:var(--green);color:#000}
+.seg button[aria-checked="true"][data-v="1"]{background:var(--indigo);color:#fff}
+.shN{font-size:13px;color:var(--label2);margin:14px 0 0}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 @media (max-height:420px){.nav{position:static;transform:none;margin:24px auto 0;width:max-content}body{padding-bottom:calc(16px + env(safe-area-inset-bottom))}}
 .empty{background:var(--card);border-radius:var(--r-card);padding:24px;text-align:center;color:var(--label2)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.heart,.burst{display:none}}
@@ -169,6 +193,15 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
   <button id="bRefresh" aria-label="Actualiser"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4h-4"/></svg></button>
 </nav>
 <div class="toast" id="toast" role="status"></div>
+<div class="sheetbg" id="sheetbg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+    <div class="grab"></div>
+    <div class="shT" id="shT"></div>
+    <div class="shS" id="shS"></div>
+    <div class="seg" role="radiogroup"><button role="radio" data-v="0">Repos</button><button role="radio" data-v="1">Télétravail</button></div>
+    <p class="shN">Enregistré tout de suite, et visible aussi par Sam. Cineplanner n'est jamais modifié.</p>
+  </div>
+</div>
 <script>
 // Mots doux de Sam : modifie librement cette liste.
 const MOTS = [
@@ -188,6 +221,11 @@ const code = (location.hash.slice(1) || store.get('code') || '').trim();
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const smooth = () => matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth';
 const URL_DATA = code === 'local' ? 'out/data.json' : code && `https://gist.githubusercontent.com/SAM-domia/${code}/raw/data.json`; // #local = aperçu sur le PC
+// Jours de télétravail cochés par Alexia : partagés via le mini-service Cloudflare (dossier worker/), jamais via Cineplanner.
+const TT_URL = 'https://horaires-alexia.sam-domia.workers.dev';
+const TT_API = code && code !== 'local' ? `${TT_URL}/?code=${encodeURIComponent(code)}` : null; // #local : gardé sur ce navigateur seulement
+let tt = {};
+try { tt = JSON.parse(store.get('tt')) || {}; } catch {}
 const $ = id => document.getElementById(id);
 const iso = d => d.toLocaleDateString('sv-SE');
 const parse = s => new Date(s + 'T12:00:00');
@@ -201,6 +239,7 @@ try { data = JSON.parse(store.get('data')); if (!data?.days) data = null; } catc
 function info(d) {
   const v = data.days[d] || {};
   if (v.s) return { kind: 'work', label: esc(v.s.map(([a, b]) => `${a} – ${b}`).join(' · ')), s: v.s, hours: dur(v.s) };
+  if (tt[d]) return { kind: 'tt', label: 'Télétravail' };
   if (v.off) return { kind: 'rest', label: esc(v.off) };
   if (!v.draft && d <= data.publishedUntil) return { kind: 'rest', label: 'Repos' };
   return { kind: 'unk', label: 'Pas encore publié' };
@@ -221,8 +260,14 @@ function heroHTML(today) {
   let top, line;
   if (t.kind === 'rest') {
     top = `<div class="big rest">Repos aujourd'hui 🌿</div>`; line = "Profite, tu l'as bien mérité.";
-    for (let d = add(today, 1); d <= add(today, 30); d = add(d, 1)) { const x = info(d); if (x.kind === 'work') { line += `<br>Reprise ${d === add(today, 1) ? 'demain' : fmt(d, { weekday: 'long', day: 'numeric' })} à ${x.s[0][0]}`; break; } if (x.kind === 'unk') break; }
+    for (let d = add(today, 1); d <= add(today, 30); d = add(d, 1)) {
+      const x = info(d), day = d === add(today, 1) ? 'demain' : fmt(d, { weekday: 'long', day: 'numeric' });
+      if (x.kind === 'work') { line += `<br>Reprise ${day} à ${x.s[0][0]}`; break; }
+      if (x.kind === 'tt') { line += `<br>Télétravail ${day}`; break; }
+      if (x.kind === 'unk') break;
+    }
   }
+  else if (t.kind === 'tt') { top = `<div class="big ttc">Télétravail 🏠</div>`; line = 'Bonne journée à la maison 💛'; }
   else if (t.kind === 'work') {
     top = `<div class="big num">${t.label.replace(' · ', '<br>')}</div>`;
     const late = t.s.some(([, b]) => b >= '23:00' || b < '05:00');
@@ -256,23 +301,39 @@ function render() {
       <div class="bar"></div>
       <div class="t">${x.kind === 'work'
         ? `<b class="num">${x.s.map(([a, b]) => `<span class="slot">${a} – ${b}</span>`).join('')}</b><em>${x.s.length > 1 ? 'Coupure' : 'Service'}</em>`
-        : `<b>${x.label}${x.kind === 'rest' ? ' 🌿' : ''}</b>`}</div>
+        : `<b>${x.kind === 'tt' ? '🏠 ' : ''}${x.label}${x.kind === 'rest' ? ' 🌿' : ''}</b>`}</div>
       ${x.hours ? `<div class="h num">${x.hours}</div>` : ''}</div>`;
   }
   $('app').innerHTML = heroHTML(today) +
     `<section class="dark" style="--i:1"><h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines… courage ❤️'}</p><div class="grid">${grid}</div>
      <div class="pick" aria-live="polite">${sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${info(sel).label}` : 'Touche un jour pour voir tes horaires'}</div>
-     <div class="legend"><span><b class="r"></b>Repos</span><span><b></b>Travail</span></div></section>
+     <div class="legend"><span><b class="r"></b>Repos</span><span><b class="v"></b>Télétravail</span><span><b></b>Cinéma</span></div></section>
      <section class="list">${rows}</section>`;
   const old = Date.now() - new Date(data.checkedAt) > 3 * 3600e3, fresh = Date.now() - new Date(data.changedAt) < 48 * 3600e3;
   $('status').className = 'status' + (old ? ' old' : '');
   $('status').lastChild.textContent = `${old ? 'Pas de mise à jour récente' : 'À jour'} · vérifié ${ago(data.checkedAt)}${fresh ? ` · planning modifié ${ago(data.changedAt)}` : ''}`;
   $('foot').textContent = `Planning modifié pour la dernière fois le ${new Date(data.changedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })} · fait avec amour par Sam`;
 }
+async function loadTT() {
+  if (!TT_API) return;
+  const r = await fetch(TT_API, { cache: 'no-store', signal: AbortSignal.timeout?.(8000) }).catch(() => null);
+  const j = r?.ok && await r.json().catch(() => null);
+  if (j?.days) { tt = j.days; store.set('tt', JSON.stringify(tt)); }
+}
+async function setTT(d, on) {
+  const before = tt;
+  tt = { ...tt }; if (on) tt[d] = 'tt'; else delete tt[d];
+  store.set('tt', JSON.stringify(tt)); render();
+  if (!TT_API) return;
+  const r = await fetch(TT_API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ date: d, tt: on }) }).catch(() => null);
+  if (!r?.ok) { tt = before; store.set('tt', JSON.stringify(tt)); render(); toast("Pas enregistré : pas de réseau. Réessaie dans un moment."); }
+}
 async function load() {
   if (!code) return render();
   let r;
+  const ttDone = loadTT();
   try { r = await fetch(`${URL_DATA}?t=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout?.(8000) }); } catch {}
+  await ttDone;
   if (r?.status === 404) { $('app').innerHTML = `<div class="empty">Ce lien ne marche pas. Redemande-le à Sam 💌</div>`; $('status').lastChild.textContent = ''; return; }
   const fresh = r?.ok && await r.json().catch(() => null);
   if (fresh?.days) { data = fresh; store.set('data', JSON.stringify(data)); store.set('code', code); } // le code n'est gardé qu'une fois validé
@@ -325,6 +386,34 @@ $('app').addEventListener('click', e => {
   const p = document.querySelector('.pick');
   p.style.opacity = 0;
   setTimeout(() => { p.innerHTML = sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${x.label}` : 'Touche un jour pour voir tes horaires'; p.style.opacity = 1; }, 120);
+  if (x.kind === 'rest' || x.kind === 'tt') openSheet(d, b);
+});
+// Feuille « Repos / Télétravail » : s'ouvre en touchant un jour sans service (pastille ou ligne)
+let sheetDay = null, sheetFrom = null;
+function openSheet(d, from) {
+  sheetDay = d; sheetFrom = from;
+  const v = data.days[d] || {};
+  $('shT').textContent = fmt(d, { weekday: 'long', day: 'numeric', month: 'long' });
+  $('shS').textContent = `Cineplanner dit : ${v.off || 'repos'}`.replace(': Repos', ': repos');
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-checked', String((b.dataset.v === '1') === !!tt[d])));
+  const bg = $('sheetbg'); bg.hidden = false; requestAnimationFrame(() => bg.classList.add('on'));
+  document.querySelector('.seg button[aria-checked="true"]').focus({ preventScroll: true });
+}
+function closeSheet() {
+  const bg = $('sheetbg'); bg.classList.remove('on');
+  setTimeout(() => { bg.hidden = true; }, 300);
+  sheetFrom?.focus?.({ preventScroll: true });
+}
+$('sheetbg').addEventListener('click', e => { if (e.target.id === 'sheetbg') closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('sheetbg').hidden) closeSheet(); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  const on = b.dataset.v === '1';
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  if (on !== !!tt[sheetDay]) setTT(sheetDay, on);
+  setTimeout(closeSheet, 250);
+}));
+$('app').addEventListener('click', e => {
+  const r = e.target.closest('.row.rest, .row.tt'); if (r) openSheet(r.id.slice(1), r);
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 const special = { '02-14': "Joyeuse Saint-Valentin, mon amour ❤️" }; // shortcut: ajoute vos dates (anniversaire, rencontre) ici, format MM-JJ

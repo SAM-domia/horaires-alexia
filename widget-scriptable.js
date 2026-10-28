@@ -14,8 +14,9 @@ try {
 
 const iso = d => { const z = new Date(d.getTime() - d.getTimezoneOffset() * 6e4); return z.toISOString().slice(0, 10); };
 const add = (s, n) => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n); return iso(d); };
-const info = d => { const v = data.days[d] || {}; return v.s ? { work: true, txt: v.s.map(x => x.join(" – ")).join("\n") } : (v.off || (!v.draft && d <= data.publishedUntil)) ? { rest: true, txt: v.off || "Repos" } : { txt: "Pas encore publié" }; };
+const info = d => { const v = data.days[d] || {}; if (!v.s && data.tt && data.tt[d]) return { work: true, tt: true, txt: "Télétravail 🏠" }; return v.s ? { work: true, txt: v.s.map(x => x.join(" – ")).join("\n") } : (v.off || (!v.draft && d <= data.publishedUntil)) ? { rest: true, txt: v.off || "Repos" } : { txt: "Pas encore publié" }; };
 const green = Color.dynamic(new Color("#248A3D"), new Color("#30D158")), dot = Color.dynamic(new Color("#34C759"), new Color("#30D158")), grey = Color.dynamic(new Color("#3C3C43", .6), new Color("#EBEBF5", .6));
+const indigo = Color.dynamic(new Color("#5856D6"), new Color("#5E5CE6"));
 const red = Color.dynamic(new Color("#FF3B30"), new Color("#FF453A")), ink = Color.dynamic(Color.black(), Color.white());
 
 const w = new ListWidget();
@@ -31,14 +32,14 @@ else {
   t(new Date().toLocaleDateString("fr-FR", { weekday: "long" }).toUpperCase(), 12, red, "semibold");
   w.addSpacer(2);
   if (now.rest) t("Repos 🌿", small ? 26 : 28, green, "bold");
-  else t(now.txt, small ? 17 : 16, ink, "semibold");
+  else t(now.txt, small ? 17 : 16, now.tt ? indigo : ink, "semibold");
   w.addSpacer(small ? 6 : 3);
   let next = null;
   for (let d = add(today, 1); d <= add(today, 60); d = add(d, 1)) { const x = info(d); if (x.rest) { next = d; break; } if (!x.work) break; }
   if (now.rest) {
     for (let d = add(today, 1); d <= add(today, 30); d = add(d, 1)) {
       const x = info(d); if (!x.work && !x.rest) break;
-      if (x.work) { const day = d === add(today, 1) ? "demain" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }); t(`Reprise ${day} · ${data.days[d].s[0][0]}`, 13, grey, "semibold"); break; }
+      if (x.work) { if (x.tt) { t(`Télétravail ${d === add(today, 1) ? "demain" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}`, 13, grey, "semibold"); break; } const day = d === add(today, 1) ? "demain" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }); t(`Reprise ${day} · ${data.days[d].s[0][0]}`, 13, grey, "semibold"); break; }
     }
   }
   if (!now.rest && next) {
@@ -51,8 +52,8 @@ else {
     for (let i = 0; i < 7; i++) {
       const d = add(today, i), x = info(d), c = row.addStack();
       c.size = new Size(28, 28); c.cornerRadius = 14; c.centerAlignContent();
-      c.backgroundColor = x.rest ? dot : Color.dynamic(new Color("#787880", .16), new Color("#787880", .32));
-      const n = c.addText(String(+d.slice(8))); n.font = Font.semiboldSystemFont(12); n.textColor = x.rest ? Color.black() : ink;
+      c.backgroundColor = x.rest ? dot : x.tt ? indigo : Color.dynamic(new Color("#787880", .16), new Color("#787880", .32));
+      const n = c.addText(String(+d.slice(8))); n.font = Font.semiboldSystemFont(12); n.textColor = x.rest ? Color.black() : x.tt ? Color.white() : ink;
     }
   }
   w.addSpacer();
