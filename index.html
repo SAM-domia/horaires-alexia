@@ -168,6 +168,43 @@ h1{font-size:30px;line-height:36px;margin:2px 0 0}
 html,body,button{touch-action:manipulation}
 /* Pas de sélection de texte ni de menu « Copier » à l'appui long, comme une app native */
 html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* Vues 3 jours / semaine / mois (dans la carte noire) */
+.vseg{display:flex;background:rgba(120,120,128,.32);border-radius:9px;padding:2px;gap:2px;margin:0 0 14px}
+.vseg button{flex:1;appearance:none;border:0;background:transparent;color:#fff;font:600 13px var(--font);height:32px;border-radius:7px;transition:background-color .25s var(--ease)}
+.vseg button[aria-selected="true"]{background:#636366}
+.vnav{display:flex;align-items:center;gap:6px;margin:0 0 10px}
+.vnav h2{flex:1;text-align:center;font-size:17px!important;line-height:22px!important;margin:0!important}
+.vnav h2::first-letter{text-transform:uppercase}
+.vnav button{appearance:none;border:0;background:rgba(255,255,255,.1);color:#fff;width:44px;height:36px;border-radius:10px;font-size:22px;line-height:1}
+.tline{display:flex;gap:4px}
+.hours{position:relative;width:24px;flex:none;margin-top:38px;height:240px}
+.hours span{position:absolute;right:0;transform:translateY(-50%);font-size:11px;color:rgba(235,235,245,.55)}
+.cols{flex:1;display:grid;gap:3px}
+.col{appearance:none;border:0;padding:0;background:none;color:#fff;font:inherit;display:flex;flex-direction:column;min-width:0;border-radius:8px}
+.col .hd{height:38px;font-size:11px;line-height:13px;color:rgba(235,235,245,.65);text-transform:capitalize;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.col .hd b{font-size:15px;line-height:19px;color:#fff;font-weight:600}
+.col .hd.td,.col .hd.td b{color:var(--red)}
+.lane{position:relative;height:240px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden;
+  background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:100% 60px}
+.blk{position:absolute;left:2px;right:2px;border-radius:5px;background:var(--blue);color:#fff;font-size:11px;line-height:13px;padding:3px;text-align:left;font-variant-numeric:tabular-nums;overflow:hidden}
+.blk span{font-size:10px}
+.rst,.tlt,.unkc{position:absolute;inset:2px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;writing-mode:horizontal-tb}
+.rst{background:color-mix(in srgb,var(--green) 25%,transparent);border:1px solid var(--green);color:var(--green)}
+.tlt{background:color-mix(in srgb,var(--indigo) 35%,transparent);border:1px solid var(--indigo);color:#C9C8FF}
+.unkc{border:1px dashed rgba(235,235,245,.25);color:rgba(235,235,245,.45);text-align:center;padding:4px}
+.now{position:absolute;left:0;right:0;height:2px;background:var(--red)}
+.now::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--red)}
+.col.sel .lane{outline:2px solid #fff;outline-offset:1px}
+.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.mgrid .dn{font-size:13px;color:rgba(235,235,245,.65);font-weight:600}
+.mc{appearance:none;border:0;height:44px;border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font:600 15px var(--font);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
+.mc i{display:block;width:18px;height:3px;border-radius:2px;background:var(--blue)}
+.mc.rest{background:var(--green);color:#000}
+.mc.tt{background:var(--indigo)}
+.mc.unk{background:transparent;border:1px dashed rgba(235,235,245,.25);color:rgba(235,235,245,.5)}
+.mc.out{opacity:.35}
+.mc.today{outline:2px solid #fff;outline-offset:1px}
+.mc.sel{transform:scale(1.08);outline:2px solid #fff;outline-offset:2px;transition:transform .45s var(--spring)}
 /* Barre de titre fixe façon iOS : reste en haut au défilement, verre flouté */
 body{padding-top:0}
 .top{position:sticky;top:0;z-index:5;margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));
@@ -259,6 +296,44 @@ const fmt = (s, o) => parse(s).toLocaleDateString('fr-FR', o);
 const mins = t => +t.slice(0, 2) * 60 + +t.slice(3);
 const dur = ss => { let m = 0; for (const [a, b] of ss) m += (mins(b) - mins(a) + 1440) % 1440; return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`; };
 let data = null, sel = null, more = false; // more : liste des 45 jours au lieu de 7
+// Vues de la carte noire : 2 semaines (défaut), 3 jours, semaine, mois. La dernière choisie est retenue.
+const VIEWS = [['2s', '2 sem.'], ['3j', '3 jours'], ['sem', 'Semaine'], ['mois', 'Mois']];
+let view = VIEWS.some(([k]) => k === store.get('view')) ? store.get('view') : '2s', off = 0; // off : décalage (jours, semaines ou mois)
+const H0 = 8, H1 = 24, COLH = 240; // frise de 8 h à minuit
+const hm = t => +t.slice(0, 2) + +t.slice(3) / 60;
+const pos = h => Math.round((Math.min(Math.max(h, H0), H1) - H0) / (H1 - H0) * COLH);
+function colHTML(d, today, wide) {
+  const x = info(d);
+  let inner = '';
+  if (x.kind === 'work') inner = x.s.map(([a, b]) => { const t = pos(hm(a)), e = pos(b < a ? H1 : hm(b)); return `<div class="blk" style="top:${t}px;height:${Math.max(e - t, 14)}px">${wide ? `${a}<br>${b}` : `<span>${a.replace(':00', 'h').replace(':', 'h')}</span>`}</div>`; }).join('');
+  else if (x.kind === 'rest') inner = `<div class="rst">${wide ? x.label : ''}</div>`;
+  else if (x.kind === 'tt') inner = `<div class="tlt">${wide ? 'Télétravail' : ''}</div>`;
+  else inner = `<div class="unkc">${wide ? 'Pas encore publié' : ''}</div>`;
+  if (d === today) { const n = new Date(), h = n.getHours() + n.getMinutes() / 60; if (h >= H0) inner += `<div class="now" style="top:${pos(h)}px"></div>`; }
+  return `<button class="col ${d === today ? 'today' : ''} ${d === sel ? 'sel' : ''}" data-d="${d}" aria-label="${fmt(d, { weekday: 'long', day: 'numeric' })} : ${x.label}">
+    <span class="hd ${d === today ? 'td' : ''}">${fmt(d, { weekday: wide ? 'short' : 'narrow' }).replace('.', '')}<b>${+d.slice(8)}</b></span><span class="lane">${inner}</span></button>`;
+}
+function viewHTML(today) {
+  if (view === 'mois') {
+    const m0 = parse(today); m0.setDate(1); m0.setMonth(m0.getMonth() + off);
+    const first = iso(m0), mon = first.slice(0, 7), start = add(first, -((m0.getDay() + 6) % 7));
+    let cells = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<div class="dn">${x}</div>`).join('');
+    for (let i = 0; i < 42; i++) {
+      const d = add(start, i); if (i >= 35 && d.slice(0, 7) !== mon) break;
+      const k = info(d).kind;
+      cells += `<button class="mc ${k} ${d.slice(0, 7) !== mon ? 'out' : ''} ${d === today ? 'today' : ''} ${d === sel ? 'sel' : ''}" data-d="${d}" aria-label="${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })} : ${info(d).label}">${+d.slice(8)}${k === 'work' ? '<i></i>' : ''}</button>`;
+    }
+    const title = m0.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return `<div class="vnav"><button data-off="-1" aria-label="Mois précédent">‹</button><h2>${title}</h2><button data-off="1" aria-label="Mois suivant">›</button></div><div class="mgrid">${cells}</div>`;
+  }
+  const n = view === '3j' ? 3 : 7;
+  const start = view === '3j' ? add(today, off * 3) : add(today, -((parse(today).getDay() + 6) % 7) + off * 7);
+  const end = add(start, n - 1);
+  const title = view === '3j' && off === 0 ? 'Les 3 prochains jours' : `${fmt(start, { day: 'numeric', month: 'short' })} – ${fmt(end, { day: 'numeric', month: 'short' })}`;
+  const hours = [8, 12, 16, 20, 24].map(h => `<span style="top:${pos(h)}px">${h}h</span>`).join('');
+  return `<div class="vnav"><button data-off="-1" aria-label="Précédent">‹</button><h2>${title}</h2><button data-off="1" aria-label="Suivant">›</button></div>
+    <div class="tline"><div class="hours">${hours}</div><div class="cols" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${[...Array(n)].map((_, i) => colHTML(add(start, i), today, n === 3)).join('')}</div></div>`;
+}
 try { data = JSON.parse(store.get('data')); if (!data?.days) data = null; } catch {}
 
 function info(d) {
@@ -330,7 +405,9 @@ function render() {
       ${x.hours ? `<div class="h num">${x.hours}</div>` : ''}</div>`;
   }
   $('app').innerHTML = heroHTML(today) +
-    `<section class="dark" style="--i:1"><h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines'}</p><div class="grid">${grid}</div>
+    `<section class="dark" style="--i:1">
+     <div class="vseg" role="tablist">${VIEWS.map(([k, l]) => `<button role="tab" data-view="${k}" aria-selected="${view === k}">${l}</button>`).join('')}</div>
+     ${view === '2s' ? `<h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines'}</p><div class="grid">${grid}</div>` : viewHTML(today)}
      <div class="pick" aria-live="polite">${sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${info(sel).label}` : 'Touche un jour pour voir tes horaires'}</div>
      <div class="legend"><span><b class="r"></b>Repos</span><span><b class="v"></b>Télétravail</span><span><b></b>Cinéma</span></div></section>
      <section class="list">${rows}${more ? '' : '<button class="more" id="bMore">Voir la suite</button>'}</section>`;
@@ -401,12 +478,16 @@ $('bLove').addEventListener('click', e => { if (e.detail === 0) word(); }); // c
 $('bToday').onclick = () => { sel = null; render(); scrollTo({ top: 0, behavior: smooth() }); };
 $('bRefresh').onclick = () => { const b = $('bRefresh'); b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin'); $('status').lastChild.textContent = 'Actualisation…'; load(); };
 $('app').addEventListener('click', e => {
-  const b = e.target.closest('.dot'); if (!b) return;
+  const v = e.target.closest('[data-view]');
+  if (v) { view = v.dataset.view; off = 0; store.set('view', view); render(); return; }
+  const o = e.target.closest('[data-off]');
+  if (o) { off += +o.dataset.off; render(); return; }
+  const b = e.target.closest('.dot, .col, .mc'); if (!b) return;
   const d = b.dataset.d, x = info(d);
   if (d === iso(new Date()) && sel === d) { hearts(12); if (MOT_AUJOURDHUI) toast(MOT_AUJOURDHUI); }
   sel = sel === d && d !== iso(new Date()) ? null : d;
   // Pas de render() : on ne bascule que les classes, pour garder le focus et laisser jouer le ressort.
-  document.querySelectorAll('.dot.sel, .row.sel').forEach(el => el.classList.remove('sel'));
+  document.querySelectorAll('.dot.sel, .col.sel, .mc.sel, .row.sel').forEach(el => el.classList.remove('sel'));
   if (sel) { b.classList.add('sel'); $('r' + sel)?.classList.add('sel'); }
   const p = document.querySelector('.pick');
   p.style.opacity = 0;
