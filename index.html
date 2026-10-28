@@ -130,6 +130,26 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
 .pick b{text-transform:capitalize}
 .nav button{-webkit-touch-callout:none;user-select:none;touch-action:manipulation}
 @media (min-width:900px){main{max-width:600px}}
+/* Retours de l'expert UI/UX iPhone */
+@media (prefers-color-scheme:dark){:root{--card-dark:#2C2C2E}}
+.dot.sel{background:transparent;color:#fff;outline:2px solid #fff;outline-offset:3px;transform:scale(1.08)}
+.dot.rest.sel{background:var(--green);color:#000}
+.dot:not(.rest):not(.unk).sel{background:rgba(255,255,255,.1)}
+.dark p,.grid .dn{color:rgba(235,235,245,.65)}
+.dot.past{opacity:.6}
+.dot.unk{color:rgba(235,235,245,.5);border-color:rgba(235,235,245,.35)}
+.dot.today::after{display:none}
+.row:active{transform:none}
+.heart{animation:fall linear forwards}
+.hero .big{margin-top:0}
+.hero .line b.g{display:block;font-size:22px;line-height:28px;font-weight:600;margin-top:2px}
+.hero .love{color:var(--label2)}
+.row .t b .slot{display:block;white-space:nowrap}
+.row.rest{background:color-mix(in srgb,var(--green) 12%,var(--card))}
+.pick{transition:opacity .2s var(--ease)}
+.nav{gap:8px}
+.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#bLove:active{transform:scale(1.25);transition:transform .8s linear}
 @media (max-height:420px){.nav{position:static;transform:none;margin:24px auto 0;width:max-content}body{padding-bottom:calc(16px + env(safe-area-inset-bottom))}}
 .empty{background:var(--card);border-radius:var(--r-card);padding:24px;text-align:center;color:var(--label2)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.heart,.burst{display:none}}
@@ -144,9 +164,9 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
   <p class="foot" id="foot"></p>
 </main>
 <nav class="nav" aria-label="Actions">
-  <button id="bToday" aria-label="Revenir à aujourd'hui">◉</button>
-  <button id="bLove" aria-label="Un petit mot">♥</button>
-  <button id="bRefresh" aria-label="Actualiser">↻</button>
+  <button id="bToday" aria-label="Revenir à aujourd'hui"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6" fill="currentColor"/></svg></button>
+  <button id="bLove" aria-label="Un petit mot"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg></button>
+  <button id="bRefresh" aria-label="Actualiser"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4h-4"/></svg></button>
 </nav>
 <div class="toast" id="toast" role="status"></div>
 <script>
@@ -210,7 +230,7 @@ function heroHTML(today) {
   } else { top = `<div class="big">Pas encore publié</div>`; line = ''; }
   const nr = nextRest && t.kind !== 'rest'
     ? `<div class="line" style="margin-top:8px">Prochain repos : <b class="g">${fmt(nextRest, { weekday: 'long', day: 'numeric', month: 'long' })}</b>${nextRest === add(today, 1) ? ' (demain !)' : ''}</div>` : '';
-  return `<section class="hero"><div class="k">Aujourd'hui</div>${top}<div class="line">${line}</div>${nr}<div class="love" id="love">${love}</div></section>`;
+  return `<section class="hero">${top}<div class="line">${line}</div>${nr}<div class="love" id="love">${love}</div></section>`;
 }
 function render() {
   if (!code) { $('app').innerHTML = `<div class="empty">Ouvre le lien que Sam t'a envoyé 💌</div>`; $('status').lastChild.textContent = ''; return; }
@@ -234,7 +254,9 @@ function render() {
     rows += `<div style="--i:${Math.min(n++, 14)}" class="row ${x.kind} ${d === today ? 'today' : ''} ${d === sel ? 'sel' : ''}" id="r${d}">
       <div class="d"><small>${fmt(d, { weekday: 'short' }).replace('.', '')}</small><span class="num">${+d.slice(8)}</span></div>
       <div class="bar"></div>
-      <div class="t"><b>${x.kind === 'rest' ? x.label + ' 🌿' : x.kind === 'work' ? (x.s.length > 1 ? 'Coupure' : 'Service') : x.label}</b>${x.kind === 'work' ? `<em class="num">${x.label}</em>` : ''}</div>
+      <div class="t">${x.kind === 'work'
+        ? `<b class="num">${x.s.map(([a, b]) => `<span class="slot">${a} – ${b}</span>`).join('')}</b><em>${x.s.length > 1 ? 'Coupure' : 'Service'}</em>`
+        : `<b>${x.label}${x.kind === 'rest' ? ' 🌿' : ''}</b>`}</div>
       ${x.hours ? `<div class="h num">${x.hours}</div>` : ''}</div>`;
   }
   $('app').innerHTML = heroHTML(today) +
@@ -296,8 +318,13 @@ $('app').addEventListener('click', e => {
   const b = e.target.closest('.dot'); if (!b) return;
   const d = b.dataset.d, x = info(d);
   if (d === iso(new Date()) && sel === d) { hearts(12); toast("Aujourd'hui aussi, je pense à toi. 💛"); }
-  sel = sel === d && d !== iso(new Date()) ? null : d; render();
-  document.querySelector(`.dot[data-d="${d}"]`)?.focus({ preventScroll: true });
+  sel = sel === d && d !== iso(new Date()) ? null : d;
+  // Pas de render() : on ne bascule que les classes, pour garder le focus et laisser jouer le ressort.
+  document.querySelectorAll('.dot.sel, .row.sel').forEach(el => el.classList.remove('sel'));
+  if (sel) { b.classList.add('sel'); $('r' + sel)?.classList.add('sel'); }
+  const p = document.querySelector('.pick');
+  p.style.opacity = 0;
+  setTimeout(() => { p.innerHTML = sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${x.label}` : 'Touche un jour pour voir tes horaires'; p.style.opacity = 1; }, 120);
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 const special = { '02-14': "Joyeuse Saint-Valentin, mon amour ❤️" }; // shortcut: ajoute vos dates (anniversaire, rencontre) ici, format MM-JJ
