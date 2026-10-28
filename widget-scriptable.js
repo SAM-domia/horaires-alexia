@@ -1,7 +1,7 @@
 // Widget « Horaires d'Alexia » pour l'app Scriptable (iPhone). Coller tout ce fichier dans un nouveau script.
 const CODE = "COLLE_ICI_LE_CODE"; // le code secret (même que dans le lien de l'app)
 const APP = `https://sam-domia.github.io/horaires-alexia/#${CODE}`;
-const MOTS = ["Je suis fier de toi 💛", "Je t'aime ❤️", "Tu es incroyable ✨", "Courage, mon amour 💪", "Câlin ce soir 🫶"];
+const MOTS = []; // mots doux de Sam, à écrire (un par jour, en bas du widget moyen)
 
 const fm = FileManager.local(), cache = fm.joinPath(fm.documentsDirectory(), "alexia.json");
 let data;
@@ -59,7 +59,7 @@ else {
   w.addSpacer();
   const mins = Math.round((Date.now() - new Date(data.checkedAt)) / 6e4);
   const age = mins < 60 ? `${mins} min` : `${Math.round(mins / 60)} h`;
-  t(small ? `à jour · ${age}` : `${MOTS[new Date().getDate() % MOTS.length]}  ·  à jour il y a ${age}`, 11, mins > 180 ? red : grey);
+  t(small ? `à jour · ${age}` : `${MOTS.length ? MOTS[new Date().getDate() % MOTS.length] + "  ·  " : ""}à jour il y a ${age}`, 11, mins > 180 ? red : grey);
 }
 Script.setWidget(w);
 if (!config.runsInWidget) await w.presentMedium();

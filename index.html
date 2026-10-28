@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mes horaires">
@@ -150,6 +150,32 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
 .nav{gap:8px}
 .nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #bLove:active{transform:scale(1.25);transition:transform .8s linear}
+/* Moins de défilement : blocs resserrés, 7 jours puis « Voir la suite » */
+h1{font-size:30px;line-height:36px;margin:2px 0 0}
+.sub{margin:0 0 12px}
+.hero{padding:16px 18px;margin-bottom:12px}
+.hero .big{font-size:24px;line-height:30px}
+.hero .love{margin-top:6px}
+.dark{padding:16px 14px 12px;margin-bottom:14px}
+.dark p{margin:2px 4px 12px}
+.pick{margin-top:10px}
+.legend{margin-top:8px}
+.list{gap:6px}
+.row{padding:8px 12px}
+.row .d span{font-size:20px;line-height:24px}
+.more{appearance:none;border:0;background:var(--fill);color:var(--blue);font:600 16px var(--font);height:44px;border-radius:var(--r-row);margin-top:4px}
+.foot{margin-top:16px}
+html,body,button{touch-action:manipulation}
+/* Barre de titre fixe façon iOS : reste en haut au défilement, verre flouté */
+body{padding-top:0}
+.top{position:sticky;top:0;z-index:5;margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));
+  padding:calc(env(safe-area-inset-top) + 10px) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
+  background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:.5px solid var(--sep);display:flex;flex-direction:column}
+.top h1{margin:0;font-size:24px;line-height:30px}
+.top .status{margin-top:1px}
+.sub{margin-top:12px}
+@media (prefers-reduced-transparency:reduce){.top{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}}
 /* Télétravail : indigo iOS, jamais confondu avec le repos */
 :root{--indigo:#5856D6;--indigo-text:#4B49C9}
 @media (prefers-color-scheme:dark){:root{--indigo:#5E5CE6;--indigo-text:#A5A4FF}}
@@ -181,8 +207,10 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
 </head>
 <body>
 <main>
-  <div class="status" id="status"><i></i><span>Chargement…</span></div>
-  <h1 id="hello">Coucou Alexia</h1>
+  <header class="top">
+    <h1 id="hello">Coucou Alexia</h1>
+    <div class="status" id="status"><i></i><span>Chargement…</span></div>
+  </header>
   <p class="sub" id="date"></p>
   <div id="app"></div>
   <p class="foot" id="foot"></p>
@@ -203,18 +231,13 @@ h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spaci
   </div>
 </div>
 <script>
-// Mots doux de Sam : modifie librement cette liste.
-const MOTS = [
-  "Je suis tellement fier de toi. 💛",
-  "Tu gères ce cinéma comme une cheffe. Je t'aime.",
-  "Petit rappel : tu es incroyable.",
-  "Bois de l'eau, mange un truc, et pense à moi. 😘",
-  "Le plus beau film, c'est quand je te retrouve après ton service.",
-  "Je t'aime plus que le pop-corn. Et j'aime beaucoup le pop-corn.",
-  "Courage pour aujourd'hui, mon amour. Ce soir, câlin obligatoire.",
-  "Tu es ma personne préférée, toutes séances confondues.",
-];
-const SECRET = "Sam t'aime à la folie. Et il est très, très fier de toi. 💛✨";
+// Mots doux : à écrire par Sam. Tant que c'est vide, les secrets font seulement pleuvoir des cœurs.
+const MOTS = [];            // un mot du jour (sous « Aujourd'hui ») et un au hasard sur le bouton ♥
+const SECRET = '';          // 5 appuis sur « Coucou Alexia »
+const COEUR_CACHE = '';     // appui long sur ♥
+const MOT_AUJOURDHUI = '';  // deux appuis sur la pastille d'aujourd'hui
+const DATES = {};           // dates spéciales, ex. { '02-14': 'ton message' } (format MM-JJ)
+const mot = () => MOTS.length ? MOTS[Math.floor(Math.random() * MOTS.length)] : '';
 
 const store = { get: k => { try { return localStorage[k]; } catch {} }, set: (k, v) => { try { localStorage[k] = v; } catch {} } }; // Safari peut bloquer le stockage
 const code = (location.hash.slice(1) || store.get('code') || '').trim();
@@ -233,7 +256,7 @@ const add = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return i
 const fmt = (s, o) => parse(s).toLocaleDateString('fr-FR', o);
 const mins = t => +t.slice(0, 2) * 60 + +t.slice(3);
 const dur = ss => { let m = 0; for (const [a, b] of ss) m += (mins(b) - mins(a) + 1440) % 1440; return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`; };
-let data = null, sel = null;
+let data = null, sel = null, more = false; // more : liste des 45 jours au lieu de 7
 try { data = JSON.parse(store.get('data')); if (!data?.days) data = null; } catch {}
 
 function info(d) {
@@ -256,26 +279,26 @@ function heroHTML(today) {
   let nextRest = null;
   for (let d = add(today, 1); d <= add(today, 60); d = add(d, 1)) if (info(d).kind === 'rest') { nextRest = d; break; }
   if (info(today).kind === 'unk') nextRest = null;
-  const love = MOTS[Math.floor(Date.now() / 864e5) % MOTS.length];
+  const love = MOTS.length ? esc(MOTS[Math.floor(Date.now() / 864e5) % MOTS.length]) : '';
   let top, line;
   if (t.kind === 'rest') {
-    top = `<div class="big rest">Repos aujourd'hui 🌿</div>`; line = "Profite, tu l'as bien mérité.";
+    top = `<div class="big rest">Repos aujourd'hui 🌿</div>`; line = '';
     for (let d = add(today, 1); d <= add(today, 30); d = add(d, 1)) {
       const x = info(d), day = d === add(today, 1) ? 'demain' : fmt(d, { weekday: 'long', day: 'numeric' });
-      if (x.kind === 'work') { line += `<br>Reprise ${day} à ${x.s[0][0]}`; break; }
-      if (x.kind === 'tt') { line += `<br>Télétravail ${day}`; break; }
+      if (x.kind === 'work') { line += `Reprise ${day} à ${x.s[0][0]}`; break; }
+      if (x.kind === 'tt') { line += `Télétravail ${day}`; break; }
       if (x.kind === 'unk') break;
     }
   }
-  else if (t.kind === 'tt') { top = `<div class="big ttc">Télétravail 🏠</div>`; line = 'Bonne journée à la maison 💛'; }
+  else if (t.kind === 'tt') { top = `<div class="big ttc">Télétravail 🏠</div>`; line = ''; }
   else if (t.kind === 'work') {
     top = `<div class="big num">${t.label.replace(' · ', '<br>')}</div>`;
     const late = t.s.some(([, b]) => b >= '23:00' || b < '05:00');
-    line = late ? 'Fermeture ce soir. Je t\'attends. 🌙' : `${t.hours} aujourd'hui`;
+    line = `${t.hours} aujourd'hui${late ? ' · fermeture ce soir 🌙' : ''}`;
   } else { top = `<div class="big">Pas encore publié</div>`; line = ''; }
   const nr = nextRest && t.kind !== 'rest'
     ? `<div class="line" style="margin-top:8px">Prochain repos : <b class="g">${fmt(nextRest, { weekday: 'long', day: 'numeric', month: 'long' })}</b>${nextRest === add(today, 1) ? ' (demain !)' : ''}</div>` : '';
-  return `<section class="hero">${top}<div class="line">${line}</div>${nr}<div class="love" id="love">${love}</div></section>`;
+  return `<section class="hero">${top}<div class="line">${line}</div>${nr}${love ? `<div class="love" id="love">${love}</div>` : ''}</section>`;
 }
 function render() {
   if (!code) { $('app').innerHTML = `<div class="empty">Ouvre le lien que Sam t'a envoyé 💌</div>`; $('status').lastChild.textContent = ''; return; }
@@ -291,7 +314,7 @@ function render() {
   }
   const restCount = [...Array(14)].filter((_, i) => info(add(start, i)).kind === 'rest' && add(start, i) >= today).length;
   let rows = '', month = '', n = 2;
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < (more ? 45 : 7); i++) {
     const d = add(today, i), x = info(d);
     if (x.kind === 'unk' && d > add(data.publishedUntil, 0)) { rows += `<div class="row unk"><div class="bar"></div><div class="t"><em>La suite n'est pas encore publiée.</em></div></div>`; break; }
     const m = fmt(d, { month: 'long' });
@@ -305,14 +328,14 @@ function render() {
       ${x.hours ? `<div class="h num">${x.hours}</div>` : ''}</div>`;
   }
   $('app').innerHTML = heroHTML(today) +
-    `<section class="dark" style="--i:1"><h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines… courage ❤️'}</p><div class="grid">${grid}</div>
+    `<section class="dark" style="--i:1"><h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines'}</p><div class="grid">${grid}</div>
      <div class="pick" aria-live="polite">${sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${info(sel).label}` : 'Touche un jour pour voir tes horaires'}</div>
      <div class="legend"><span><b class="r"></b>Repos</span><span><b class="v"></b>Télétravail</span><span><b></b>Cinéma</span></div></section>
-     <section class="list">${rows}</section>`;
+     <section class="list">${rows}${more ? '' : '<button class="more" id="bMore">Voir la suite</button>'}</section>`;
   const old = Date.now() - new Date(data.checkedAt) > 3 * 3600e3, fresh = Date.now() - new Date(data.changedAt) < 48 * 3600e3;
   $('status').className = 'status' + (old ? ' old' : '');
   $('status').lastChild.textContent = `${old ? 'Pas de mise à jour récente' : 'À jour'} · vérifié ${ago(data.checkedAt)}${fresh ? ` · planning modifié ${ago(data.changedAt)}` : ''}`;
-  $('foot').textContent = `Planning modifié pour la dernière fois le ${new Date(data.changedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })} · fait avec amour par Sam`;
+  $('foot').textContent = `Planning modifié pour la dernière fois le ${new Date(data.changedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}`;
 }
 async function loadTT() {
   if (!TT_API) return;
@@ -366,10 +389,10 @@ function hearts(n = 24) {
   }
 }
 let taps = 0;
-$('hello').addEventListener('click', () => { if (++taps === 5) { taps = 0; hearts(); toast(SECRET, 4500); } clearTimeout($('hello').h); $('hello').h = setTimeout(() => taps = 0, 1500); });
+$('hello').addEventListener('click', () => { if (++taps === 5) { taps = 0; hearts(); if (SECRET) toast(SECRET, 4500); } clearTimeout($('hello').h); $('hello').h = setTimeout(() => taps = 0, 1500); });
 let press;
-const word = () => { burst($('bLove'), 8); toast(MOTS[Math.floor(Math.random() * MOTS.length)]); };
-$('bLove').addEventListener('pointerdown', () => press = setTimeout(() => { press = 0; hearts(40); toast("Tu as trouvé le cœur caché. Je t'aime, Alexia. 💛", 4500); }, 800));
+const word = () => { burst($('bLove'), 8); if (mot()) toast(mot()); };
+$('bLove').addEventListener('pointerdown', () => press = setTimeout(() => { press = 0; hearts(40); if (COEUR_CACHE) toast(COEUR_CACHE, 4500); }, 800));
 $('bLove').addEventListener('pointerup', () => { if (press) { clearTimeout(press); press = 0; word(); } });
 ['pointercancel', 'pointerleave'].forEach(t => $('bLove').addEventListener(t, () => { clearTimeout(press); press = 0; }));
 $('bLove').addEventListener('click', e => { if (e.detail === 0) word(); }); // clavier / VoiceOver
@@ -378,7 +401,7 @@ $('bRefresh').onclick = () => { const b = $('bRefresh'); b.classList.remove('spi
 $('app').addEventListener('click', e => {
   const b = e.target.closest('.dot'); if (!b) return;
   const d = b.dataset.d, x = info(d);
-  if (d === iso(new Date()) && sel === d) { hearts(12); toast("Aujourd'hui aussi, je pense à toi. 💛"); }
+  if (d === iso(new Date()) && sel === d) { hearts(12); if (MOT_AUJOURDHUI) toast(MOT_AUJOURDHUI); }
   sel = sel === d && d !== iso(new Date()) ? null : d;
   // Pas de render() : on ne bascule que les classes, pour garder le focus et laisser jouer le ressort.
   document.querySelectorAll('.dot.sel, .row.sel').forEach(el => el.classList.remove('sel'));
@@ -415,9 +438,11 @@ document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click'
 $('app').addEventListener('click', e => {
   const r = e.target.closest('.row.rest, .row.tt'); if (r) openSheet(r.id.slice(1), r);
 });
+$('app').addEventListener('click', e => { if (e.target.id === 'bMore') { more = true; render(); } });
+// Pas de zoom : Safari iOS ignore user-scalable=no, on bloque le pincement ici et le double-tap en CSS (touch-action).
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-const special = { '02-14': "Joyeuse Saint-Valentin, mon amour ❤️" }; // shortcut: ajoute vos dates (anniversaire, rencontre) ici, format MM-JJ
-const sp = special[iso(new Date()).slice(5)]; if (sp) setTimeout(() => { hearts(); toast(sp, 5000); }, 800);
+const sp = DATES[iso(new Date()).slice(5)]; if (sp) setTimeout(() => { hearts(); toast(sp, 5000); }, 800);
 document.body.classList.add('first');
 setTimeout(() => document.body.classList.remove('first'), 2000);
 render(); load();

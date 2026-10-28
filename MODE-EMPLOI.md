@@ -10,12 +10,17 @@
 - **Widget sur mesure** : installer l'app gratuite **Scriptable**, nouveau script, coller `widget-scriptable.js` (le code y est déjà), puis ajouter un widget Scriptable (petit ou moyen) et choisir ce script.
 
 ## Les petits secrets (ne pas lui dire 🤫)
-- 5 appuis rapides sur « Coucou Alexia » : pluie de cœurs + mot de Sam.
-- Appui court sur ♥ : un mot doux au hasard. Appui long : le cœur caché.
-- Toucher deux fois la pastille d'aujourd'hui.
-- Le 14 février (et les dates ajoutées dans `special`, dans `index.html`).
-- Un mot doux différent chaque jour, et un message les soirs de fermeture.
-Les textes sont en haut du script de `index.html` (`MOTS`, `SECRET`), modifiables librement.
+Pour l'instant, ils font seulement pleuvoir des cœurs : les messages sont à écrire par Sam,
+en haut du script de `index.html` :
+- `SECRET` : 5 appuis rapides sur « Coucou Alexia ».
+- `MOTS` : le mot du jour sous « Aujourd'hui », et un au hasard en touchant ♥ (aussi dans `widget-scriptable.js`).
+- `COEUR_CACHE` : appui long sur ♥.
+- `MOT_AUJOURDHUI` : toucher deux fois la pastille d'aujourd'hui.
+- `DATES` : un message pour une date précise, ex. `{ '02-14': '…' }`.
+
+## Télétravail
+Alexia touche un jour de repos → « Télétravail ». C'est partagé (toi, le widget, le calendrier) via le
+petit service Cloudflare `horaires-alexia.sam-domia.workers.dev` (dossier `worker/`). Cineplanner n'est jamais modifié.
 
 ## Côté Sam : la mise en route (une seule fois)
 Le robot (`update.mjs`) tourne sur GitHub toutes les 30 min, même PC éteint. Il a besoin de 4 secrets,
