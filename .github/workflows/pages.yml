@@ -1,0 +1,13 @@
+name: Publier l'app
+on: { push: { branches: [main] }, workflow_dispatch: }
+permissions: { pages: write, id-token: write, contents: read }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages }
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir site && cp index.html icon-180.png sw.js site/
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - uses: actions/deploy-pages@v4

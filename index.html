@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mes horaires">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#FAF8F5" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<meta name="format-detection" content="telephone=no">
+<!-- Pas de manifest exprès : iOS garde alors l'adresse complète (avec #code) sur l'écran d'accueil. -->
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>Horaires d'Alexia</title>
+<style>
+:root{
+  --red:#FF3B30;--orange:#FF9500;--green:#34C759;--blue:#007AFF;--pink:#FF2D55;
+  --bg:#FAF8F5;--card:#FFF;--card-dark:#1C1C1E;--on-dark:#FFF;
+  --label:#000;--label2:rgba(60,60,67,.6);--label3:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.29);--fill:rgba(120,120,128,.12);
+  --font:-apple-system,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI",sans-serif;
+  --r-row:16px;--r-card:24px;--shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
+  --ease:cubic-bezier(.32,.72,0,1);
+}
+@media (prefers-color-scheme:dark){:root{
+  --red:#FF453A;--orange:#FF9F0A;--green:#30D158;--blue:#0A84FF;--pink:#FF375F;
+  --bg:#000;--card:#1C1C1E;--card-dark:#1C1C1E;--label:#FFF;
+  --label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);
+  --sep:rgba(84,84,88,.6);--fill:rgba(120,120,128,.24);--shadow:none}}
+*{box-sizing:border-box}
+html,body{overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--label);font:17px/22px var(--font);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+  padding:calc(env(safe-area-inset-top) + 12px) calc(16px + env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+main{max-width:480px;margin:0 auto}
+.num{font-variant-numeric:tabular-nums}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--label2);user-select:none}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.status.old i{background:var(--orange)}
+h1{font-size:34px;line-height:41px;font-weight:700;margin:6px 0 2px;letter-spacing:.2px}
+.sub{font-size:15px;line-height:20px;color:var(--label2);margin:0 0 20px}
+.hero{background:var(--card);border-radius:var(--r-card);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.hero .k{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--label2)}
+.hero .big{font-size:28px;line-height:34px;font-weight:700;margin:4px 0}
+.hero .big.rest{color:var(--green)}
+.hero .line{font-size:17px;color:var(--label2)}
+.hero .love{margin-top:10px;font-size:15px;color:var(--pink)}
+.dark{background:var(--card-dark);color:var(--on-dark);border-radius:var(--r-card);padding:20px 16px 16px;margin-bottom:24px}
+.dark h2{margin:0 4px;font-size:22px;line-height:28px;font-weight:600}
+.dark p{margin:2px 4px 18px;color:rgba(235,235,245,.45);font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px 4px;text-align:center}
+.grid .dn{font-size:11px;line-height:13px;color:rgba(235,235,245,.45);font-weight:600}
+.dot{appearance:none;border:0;margin:0 auto;width:100%;max-width:44px;aspect-ratio:1;padding:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font:600 16px var(--font);font-variant-numeric:tabular-nums;position:relative;transition:transform .2s var(--ease)}
+.dot:active{transform:scale(.92)}
+.dot.rest{background:var(--green);color:#000}
+.dot.unk{background:transparent;color:rgba(235,235,245,.3);border:1px dashed rgba(235,235,245,.2)}
+.dot.today{box-shadow:0 0 0 2px var(--card-dark),0 0 0 4px #fff}
+.dot.sel{background:#fff;color:#000}
+.legend{display:flex;gap:16px;justify-content:center;margin-top:14px;font-size:12px;color:rgba(235,235,245,.55)}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px;background:rgba(255,255,255,.25)}
+.legend b.r{background:var(--green)}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:var(--r-row);padding:12px 14px;box-shadow:var(--shadow)}
+.row .d{width:44px;text-align:center;flex:none}
+.row .d small{display:block;font-size:12px;line-height:16px;color:var(--label2);text-transform:capitalize}
+.row .d span{font-size:22px;line-height:28px;font-weight:600}
+.row.today .d small,.row.today .d span{color:var(--red)}
+.row .bar{width:4px;align-self:stretch;border-radius:2px;background:var(--blue);flex:none}
+.row.rest .bar{background:var(--green)}
+.row.unk .bar{background:var(--label3)}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font-size:17px;font-weight:600}
+.row .t em{font-style:normal;font-size:15px;line-height:20px;color:var(--label2)}
+.row .h{font-size:13px;color:var(--label2);flex:none}
+.row.sel{outline:2px solid var(--blue);outline-offset:2px}
+.month{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--label2);margin:14px 4px 2px}
+.foot{text-align:center;color:var(--label3);font-size:12px;margin:28px 0 0}
+.nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:4px;padding:6px;border-radius:999px;
+  background:rgba(20,20,22,.78);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.nav button{appearance:none;border:0;background:transparent;color:#fff;width:52px;height:44px;border-radius:999px;font-size:20px;display:grid;place-items:center}
+.nav button:active{background:rgba(255,255,255,.16)}
+@media (prefers-reduced-transparency:reduce){.nav{background:#141416;-webkit-backdrop-filter:none;backdrop-filter:none}}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));margin:0 auto;max-width:420px;background:var(--card);color:var(--label);border-radius:20px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.2);
+  font-size:17px;text-align:center;opacity:0;transform:translateY(12px);transition:.35s var(--ease);pointer-events:none}
+.toast.on{opacity:1;transform:none}
+.heart{position:fixed;top:-40px;font-size:28px;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(40deg);opacity:.2}}
+/* Entrées : seulement à l'ouverture (classe .first), pas à chaque appui */
+:root{--spring:cubic-bezier(.34,1.56,.64,1)}
+.first .hero,.first .dark,.first .row,.first .month{animation:rise .6s var(--ease) both;animation-delay:calc(var(--i,0) * 35ms)}
+.first .dot{animation:pop .5s var(--spring) both;animation-delay:calc(180ms + var(--i,0) * 22ms)}
+.first h1,.first .sub,.first .status{animation:rise .6s var(--ease) both}
+.first .sub{animation-delay:60ms}
+.first .nav{animation:navIn .7s var(--spring) .35s both}
+@keyframes rise{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(4px)}}
+@keyframes pop{from{opacity:0;transform:scale(.3)}}
+@keyframes navIn{from{opacity:0;transform:translate(-50%,40px) scale(.9)}}
+.dot{transition:transform .45s var(--spring),background-color .3s var(--ease),color .3s}
+.dot.sel{transform:scale(1.12)}
+.dot.today::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #fff;animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.12);opacity:.25}}
+.row{transition:transform .35s var(--spring),outline-color .3s}
+.row:active{transform:scale(.98)}
+.row.sel{animation:flash .9s var(--ease)}
+@keyframes flash{30%{transform:scale(1.03)}}
+.big.rest{background:linear-gradient(100deg,var(--green) 40%,#B8F5C8 50%,var(--green) 60%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:shine 3.5s var(--ease) 1s infinite}
+@keyframes shine{0%{background-position:100% 0}60%,100%{background-position:0 0}}
+.love{transition:opacity .4s}
+.nav button{transition:transform .35s var(--spring),background-color .2s}
+.nav button:active{transform:scale(.86)}
+.toast{transition:opacity .3s var(--ease),transform .55s var(--spring);transform:translateY(24px) scale(.96)}
+.burst{position:fixed;font-size:22px;pointer-events:none;animation:burst 1.3s var(--ease) forwards}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1) rotate(var(--r));opacity:0}}
+.heart{animation:fall linear forwards,sway 1.2s ease-in-out infinite alternate}
+@keyframes sway{from{margin-left:-12px}to{margin-left:12px}}
+.spin{animation:spin .8s var(--ease)}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Retours des parcours : contraste, détail du jour, jours passés, grands écrans */
+:root{--green-text:#248A3D;--pink-text:#D30F45}
+@media (prefers-color-scheme:dark){:root{--green-text:var(--green);--pink-text:var(--pink)}}
+.hero .big.rest,.g{color:var(--green-text)!important}
+.big.rest{background:none!important;animation:none!important}
+.hero .love{color:var(--pink-text)}
+.foot{color:var(--label2)}
+.grid .dn{font-size:13px}
+.legend{font-size:13px}
+.dot.past{opacity:.45}
+.pick{margin:14px 4px 0;min-height:22px;text-align:center;font-size:15px;color:rgba(235,235,245,.85)}
+.pick b{text-transform:capitalize}
+.nav button{-webkit-touch-callout:none;user-select:none;touch-action:manipulation}
+@media (min-width:900px){main{max-width:600px}}
+@media (max-height:420px){.nav{position:static;transform:none;margin:24px auto 0;width:max-content}body{padding-bottom:calc(16px + env(safe-area-inset-bottom))}}
+.empty{background:var(--card);border-radius:var(--r-card);padding:24px;text-align:center;color:var(--label2)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.heart,.burst{display:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="status" id="status"><i></i><span>Chargement…</span></div>
+  <h1 id="hello">Coucou Alexia</h1>
+  <p class="sub" id="date"></p>
+  <div id="app"></div>
+  <p class="foot" id="foot"></p>
+</main>
+<nav class="nav" aria-label="Actions">
+  <button id="bToday" aria-label="Revenir à aujourd'hui">◉</button>
+  <button id="bLove" aria-label="Un petit mot">♥</button>
+  <button id="bRefresh" aria-label="Actualiser">↻</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+<script>
+// Mots doux de Sam : modifie librement cette liste.
+const MOTS = [
+  "Je suis tellement fier de toi. 💛",
+  "Tu gères ce cinéma comme une cheffe. Je t'aime.",
+  "Petit rappel : tu es incroyable.",
+  "Bois de l'eau, mange un truc, et pense à moi. 😘",
+  "Le plus beau film, c'est quand je te retrouve après ton service.",
+  "Je t'aime plus que le pop-corn. Et j'aime beaucoup le pop-corn.",
+  "Courage pour aujourd'hui, mon amour. Ce soir, câlin obligatoire.",
+  "Tu es ma personne préférée, toutes séances confondues.",
+];
+const SECRET = "Sam t'aime à la folie. Et il est très, très fier de toi. 💛✨";
+
+const store = { get: k => { try { return localStorage[k]; } catch {} }, set: (k, v) => { try { localStorage[k] = v; } catch {} } }; // Safari peut bloquer le stockage
+const code = (location.hash.slice(1) || store.get('code') || '').trim();
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const smooth = () => matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth';
+const URL_DATA = code === 'local' ? 'out/data.json' : code && `https://gist.githubusercontent.com/SAM-domia/${code}/raw/data.json`; // #local = aperçu sur le PC
+const $ = id => document.getElementById(id);
+const iso = d => d.toLocaleDateString('sv-SE');
+const parse = s => new Date(s + 'T12:00:00');
+const add = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const fmt = (s, o) => parse(s).toLocaleDateString('fr-FR', o);
+const mins = t => +t.slice(0, 2) * 60 + +t.slice(3);
+const dur = ss => { let m = 0; for (const [a, b] of ss) m += (mins(b) - mins(a) + 1440) % 1440; return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`; };
+let data = null, sel = null;
+try { data = JSON.parse(store.get('data')); if (!data?.days) data = null; } catch {}
+
+function info(d) {
+  const v = data.days[d] || {};
+  if (v.s) return { kind: 'work', label: esc(v.s.map(([a, b]) => `${a} – ${b}`).join(' · ')), s: v.s, hours: dur(v.s) };
+  if (v.off) return { kind: 'rest', label: esc(v.off) };
+  if (!v.draft && d <= data.publishedUntil) return { kind: 'rest', label: 'Repos' };
+  return { kind: 'unk', label: 'Pas encore publié' };
+}
+function ago(t) {
+  const m = Math.round((Date.now() - new Date(t)) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  if (m < 48 * 60) return `il y a ${Math.round(m / 60)} h`;
+  return `il y a ${Math.round(m / 1440)} jours`;
+}
+function heroHTML(today) {
+  const t = info(today);
+  let nextRest = null;
+  for (let d = add(today, 1); d <= add(today, 60); d = add(d, 1)) if (info(d).kind === 'rest') { nextRest = d; break; }
+  if (info(today).kind === 'unk') nextRest = null;
+  const love = MOTS[Math.floor(Date.now() / 864e5) % MOTS.length];
+  let top, line;
+  if (t.kind === 'rest') {
+    top = `<div class="big rest">Repos aujourd'hui 🌿</div>`; line = "Profite, tu l'as bien mérité.";
+    for (let d = add(today, 1); d <= add(today, 30); d = add(d, 1)) { const x = info(d); if (x.kind === 'work') { line += `<br>Reprise ${d === add(today, 1) ? 'demain' : fmt(d, { weekday: 'long', day: 'numeric' })} à ${x.s[0][0]}`; break; } if (x.kind === 'unk') break; }
+  }
+  else if (t.kind === 'work') {
+    top = `<div class="big num">${t.label.replace(' · ', '<br>')}</div>`;
+    const late = t.s.some(([, b]) => b >= '23:00' || b < '05:00');
+    line = late ? 'Fermeture ce soir. Je t\'attends. 🌙' : `${t.hours} aujourd'hui`;
+  } else { top = `<div class="big">Pas encore publié</div>`; line = ''; }
+  const nr = nextRest && t.kind !== 'rest'
+    ? `<div class="line" style="margin-top:8px">Prochain repos : <b class="g">${fmt(nextRest, { weekday: 'long', day: 'numeric', month: 'long' })}</b>${nextRest === add(today, 1) ? ' (demain !)' : ''}</div>` : '';
+  return `<section class="hero"><div class="k">Aujourd'hui</div>${top}<div class="line">${line}</div>${nr}<div class="love" id="love">${love}</div></section>`;
+}
+function render() {
+  if (!code) { $('app').innerHTML = `<div class="empty">Ouvre le lien que Sam t'a envoyé 💌</div>`; $('status').lastChild.textContent = ''; return; }
+  if (!data) return;
+  const today = iso(new Date());
+  $('date').textContent = fmt(today, { weekday: 'long', day: 'numeric', month: 'long' });
+  // 14 jours à partir du lundi de la semaine en cours
+  const dow = (parse(today).getDay() + 6) % 7, start = add(today, -dow);
+  let grid = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<div class="dn">${x}</div>`).join('');
+  for (let i = 0; i < 14; i++) {
+    const d = add(start, i), k = info(d).kind;
+    grid += `<button style="--i:${i}" class="dot ${k === 'work' ? '' : k} ${d < today ? 'past' : ''} ${d === today ? 'today' : ''} ${d === sel ? 'sel' : ''}" data-d="${d}" aria-label="${fmt(d, { weekday: 'long', day: 'numeric' })} : ${info(d).label}">${+d.slice(8)}</button>`;
+  }
+  const restCount = [...Array(14)].filter((_, i) => info(add(start, i)).kind === 'rest' && add(start, i) >= today).length;
+  let rows = '', month = '', n = 2;
+  for (let i = 0; i < 45; i++) {
+    const d = add(today, i), x = info(d);
+    if (x.kind === 'unk' && d > add(data.publishedUntil, 0)) { rows += `<div class="row unk"><div class="bar"></div><div class="t"><em>La suite n'est pas encore publiée.</em></div></div>`; break; }
+    const m = fmt(d, { month: 'long' });
+    if (m !== month) { if (month) rows += `<div class="month" style="--i:${n++}">${m}</div>`; month = m; }
+    rows += `<div style="--i:${Math.min(n++, 14)}" class="row ${x.kind} ${d === today ? 'today' : ''} ${d === sel ? 'sel' : ''}" id="r${d}">
+      <div class="d"><small>${fmt(d, { weekday: 'short' }).replace('.', '')}</small><span class="num">${+d.slice(8)}</span></div>
+      <div class="bar"></div>
+      <div class="t"><b>${x.kind === 'rest' ? x.label + ' 🌿' : x.kind === 'work' ? (x.s.length > 1 ? 'Coupure' : 'Service') : x.label}</b>${x.kind === 'work' ? `<em class="num">${x.label}</em>` : ''}</div>
+      ${x.hours ? `<div class="h num">${x.hours}</div>` : ''}</div>`;
+  }
+  $('app').innerHTML = heroHTML(today) +
+    `<section class="dark" style="--i:1"><h2>Mes 2 semaines</h2><p>${restCount ? `${restCount} jour${restCount > 1 ? 's' : ''} de repos à venir` : 'Pas de repos ces 2 semaines… courage ❤️'}</p><div class="grid">${grid}</div>
+     <div class="pick" aria-live="polite">${sel ? `<b>${fmt(sel, { weekday: 'long', day: 'numeric' })}</b> · ${info(sel).label}` : 'Touche un jour pour voir tes horaires'}</div>
+     <div class="legend"><span><b class="r"></b>Repos</span><span><b></b>Travail</span></div></section>
+     <section class="list">${rows}</section>`;
+  const old = Date.now() - new Date(data.checkedAt) > 3 * 3600e3, fresh = Date.now() - new Date(data.changedAt) < 48 * 3600e3;
+  $('status').className = 'status' + (old ? ' old' : '');
+  $('status').lastChild.textContent = `${old ? 'Pas de mise à jour récente' : 'À jour'} · vérifié ${ago(data.checkedAt)}${fresh ? ` · planning modifié ${ago(data.changedAt)}` : ''}`;
+  $('foot').textContent = `Planning modifié pour la dernière fois le ${new Date(data.changedAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })} · fait avec amour par Sam`;
+}
+async function load() {
+  if (!code) return render();
+  let r;
+  try { r = await fetch(`${URL_DATA}?t=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout?.(8000) }); } catch {}
+  if (r?.status === 404) { $('app').innerHTML = `<div class="empty">Ce lien ne marche pas. Redemande-le à Sam 💌</div>`; $('status').lastChild.textContent = ''; return; }
+  const fresh = r?.ok && await r.json().catch(() => null);
+  if (fresh?.days) { data = fresh; store.set('data', JSON.stringify(data)); store.set('code', code); } // le code n'est gardé qu'une fois validé
+  render();
+  if (!fresh?.days) {
+    if (!data) { $('app').innerHTML = `<div class="empty">Pas de réseau pour l'instant. Réessaie dans un moment.</div>`; $('status').lastChild.textContent = 'Hors ligne'; }
+    else { $('status').className = 'status old'; $('status').lastChild.textContent = `Hors ligne · horaires vérifiés ${ago(data.checkedAt)}`; }
+  }
+}
+
+// ——— Petits secrets ———
+function toast(msg, ms = 3200) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), ms); }
+function burst(el, n = 14) {
+  const r = el.getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const h = document.createElement('div'), a = Math.PI * (1.05 + Math.random() * .9), d = 90 + Math.random() * 120;
+    h.className = 'burst'; h.textContent = ['💛', '❤️', '💕'][i % 3];
+    h.style.left = r.left + r.width / 2 + 'px'; h.style.top = r.top + r.height / 2 + 'px';
+    h.style.setProperty('--x', Math.cos(a) * d + 'px'); h.style.setProperty('--y', Math.sin(a) * d + 'px'); h.style.setProperty('--r', (Math.random() * 80 - 40) + 'deg');
+    h.style.animationDelay = Math.random() * .12 + 's';
+    document.body.appendChild(h); setTimeout(() => h.remove(), 1600);
+  }
+}
+function hearts(n = 24) {
+  for (let i = 0; i < n; i++) {
+    const h = document.createElement('div');
+    h.className = 'heart'; h.textContent = ['💛', '❤️', '💕', '✨'][i % 4];
+    h.style.left = Math.random() * 100 + 'vw'; h.style.animationDuration = 1.6 + Math.random() * 1.6 + 's'; h.style.animationDelay = Math.random() * .6 + 's';
+    document.body.appendChild(h); setTimeout(() => h.remove(), 4000);
+  }
+}
+let taps = 0;
+$('hello').addEventListener('click', () => { if (++taps === 5) { taps = 0; hearts(); toast(SECRET, 4500); } clearTimeout($('hello').h); $('hello').h = setTimeout(() => taps = 0, 1500); });
+let press;
+const word = () => { burst($('bLove'), 8); toast(MOTS[Math.floor(Math.random() * MOTS.length)]); };
+$('bLove').addEventListener('pointerdown', () => press = setTimeout(() => { press = 0; hearts(40); toast("Tu as trouvé le cœur caché. Je t'aime, Alexia. 💛", 4500); }, 800));
+$('bLove').addEventListener('pointerup', () => { if (press) { clearTimeout(press); press = 0; word(); } });
+['pointercancel', 'pointerleave'].forEach(t => $('bLove').addEventListener(t, () => { clearTimeout(press); press = 0; }));
+$('bLove').addEventListener('click', e => { if (e.detail === 0) word(); }); // clavier / VoiceOver
+$('bToday').onclick = () => { sel = null; render(); scrollTo({ top: 0, behavior: smooth() }); };
+$('bRefresh').onclick = () => { const b = $('bRefresh'); b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin'); $('status').lastChild.textContent = 'Actualisation…'; load(); };
+$('app').addEventListener('click', e => {
+  const b = e.target.closest('.dot'); if (!b) return;
+  const d = b.dataset.d, x = info(d);
+  if (d === iso(new Date()) && sel === d) { hearts(12); toast("Aujourd'hui aussi, je pense à toi. 💛"); }
+  sel = sel === d && d !== iso(new Date()) ? null : d; render();
+  document.querySelector(`.dot[data-d="${d}"]`)?.focus({ preventScroll: true });
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+const special = { '02-14': "Joyeuse Saint-Valentin, mon amour ❤️" }; // shortcut: ajoute vos dates (anniversaire, rencontre) ici, format MM-JJ
+const sp = special[iso(new Date()).slice(5)]; if (sp) setTimeout(() => { hearts(); toast(sp, 5000); }, 800);
+document.body.classList.add('first');
+setTimeout(() => document.body.classList.remove('first'), 2000);
+render(); load();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
