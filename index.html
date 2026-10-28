@@ -166,6 +166,8 @@ h1{font-size:30px;line-height:36px;margin:2px 0 0}
 .more{appearance:none;border:0;background:var(--fill);color:var(--blue);font:600 16px var(--font);height:44px;border-radius:var(--r-row);margin-top:4px}
 .foot{margin-top:16px}
 html,body,button{touch-action:manipulation}
+/* Pas de sélection de texte ni de menu « Copier » à l'appui long, comme une app native */
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* Barre de titre fixe façon iOS : reste en haut au défilement, verre flouté */
 body{padding-top:0}
 .top{position:sticky;top:0;z-index:5;margin:0 calc(-16px - env(safe-area-inset-right)) 0 calc(-16px - env(safe-area-inset-left));
