@@ -71,7 +71,8 @@ async function login() {
   const body = new URLSearchParams({ authenticity_token: token, 'user[email]': process.env.CP_EMAIL, 'user[password]': process.env.CP_PASSWORD, 'user[remember_me]': '1' });
   const res = await fetch(`${BASE}/users/sign_in`, { method: 'POST', body, redirect: 'manual', headers: { cookie: cookie() }, signal: AbortSignal.timeout(30000) });
   keep(res);
-  if (res.status !== 302 || /sign_in/.test(res.headers.get('location') || '')) throw new Error('Connexion Cineplanner refusée (identifiants ?)');
+  // Devise répond 302 ou 303 (Turbo) vers l'accueil si c'est bon, 422/200 ou un retour vers sign_in sinon.
+  if (![302, 303].includes(res.status) || /sign_in/.test(res.headers.get('location') || '')) throw new Error(`Connexion Cineplanner refusée (code ${res.status}) : vérifier CP_EMAIL / CP_PASSWORD`);
   // RÈGLE DE SAM : on ne fait que LIRE Cineplanner, jamais rien modifier. Seule exception : le formulaire de connexion ci-dessus.
   return async path => {
     if (!path.startsWith('/api/v1/') || !path.includes('.json?')) throw new Error(`Lecture seule : ${path} refusé`);
