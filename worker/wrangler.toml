@@ -5,3 +5,6 @@ compatibility_date = "2026-10-01"
 [[kv_namespaces]]
 binding = "TT"
 id = "5f63da2955bd4b128799015d75432a53"
+
+[triggers]
+crons = ["*/30 * * * *"]

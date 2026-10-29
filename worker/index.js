@@ -5,6 +5,14 @@ const H = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: H });
 
 export default {
+  // Réveil du robot toutes les 30 min : la programmation de GitHub saute des passages (trous de 4 à 7 h constatés).
+  async scheduled(_event, env) {
+    const r = await fetch('https://api.github.com/repos/SAM-domia/horaires-alexia/actions/workflows/update.yml/dispatches', {
+      method: 'POST', body: JSON.stringify({ ref: 'main' }),
+      headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: 'application/vnd.github+json', 'user-agent': 'horaires-alexia' },
+    });
+    if (!r.ok) throw new Error(`GitHub → ${r.status}`); // visible dans les journaux Cloudflare
+  },
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: H });
     if (new URL(req.url).searchParams.get('code') !== env.CODE) return json({ error: 'code' }, 403);
